@@ -1,8 +1,7 @@
 // ================= CONTROL DE VISTAS (HOME <-> CURSO) =================
 async function mostrarVistaCurso() {
-    let alumnoGuardado = localStorage.getItem('alumno_usuario_activo');
-
-    if (!alumnoGuardado) {
+    localStorage.removeItem('alumno_usuario_activo');
+    localStorage.removeItem('alumno_nombre_completo');
         let usuarioInput = prompt("Ingresa tu nombre de usuario:");
         if (!usuarioInput) return;
         
@@ -26,13 +25,13 @@ async function mostrarVistaCurso() {
             localStorage.setItem('alumno_nombre_completo', data.nombre_completo || data.usuario);
 
         } catch (error) {
-            console.error("Error al validar con Supabase:", error);
-            alert("Error de conexión al validar tus datos.");
-            return;
-        }
-    }
+                    console.error("Error al validar con Supabase:", error);
+                    alert("Error de conexión al validar tus datos.");
+                    return;
+                }
+            
 
-    // Detener el video del home al salir
+            // Detener el video del home al salir
     const iframeHome = document.getElementById('home-video');
     if (iframeHome) iframeHome.src = "";
 
