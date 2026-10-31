@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Alumnos - InnovaPro IA</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container" style="max-width: 500px; margin: 50px auto; padding: 20px;">
+        <header class="app-header">
+            <h2>Registro de Estudiante</h2>
+            <p>Ingresa la clave de tu escuela para activar tu cuenta.</p>
+        </header>
+
+        <main style="display: flex; flex-direction: column; gap: 15px; margin-top: 20px;">
+            <input type="text" id="codigo-escuela" placeholder="Clave de la escuela (ej. PRUEBA-01)" style="padding: 12px; font-size: 16px;">
+            <input type="text" id="nombre-completo" placeholder="Tu Nombre Completo" style="padding: 12px; font-size: 16px;">
+            <input type="text" id="usuario" placeholder="Crea tu Usuario (ej. alumno1)" style="padding: 12px; font-size: 16px;">
+            <input type="password" id="password" placeholder="Crea tu Contraseña" style="padding: 12px; font-size: 16px;">
+            
+            <button onclick="registrarAlumno()" class="btn-app btn-curso" style="padding: 15px; font-size: 16px; cursor: pointer;">Registrarme Ahora</button>
+            
+            <a href="index.html" style="text-align: center; margin-top: 10px; color: #555;">⬅ Volver a la página principal</a>
+        </main>
+    </div>
+
+    <!-- Script de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://fjtzyxnpgxxsducxxobx.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdHp5eG5wZ3h4c2R1Y3h4b2J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyNDgwNjksImV4cCI6MjEwNTgyNDA2OX0.LlTw1ATsXpQTwzF72YjAe9ubgFWDZJSfBhRSCfj0aJw';
+        
+        const dbCliente = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function registrarAlumno() {
+            const codigo = document.getElementById('codigo-escuela').value.trim();
+            const nombre = document.getElementById('nombre-completo').value.trim();
+            const usuario = document.getElementById('usuario').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            if(!codigo || !nombre || !usuario || !password) {
+                alert("Por favor llena todos los campos.");
+                return;
+            }
+
+            // 1. Buscamos la escuela en la tabla 'escuelas_demo'
+            const { data: escuela, error: errorEscuela } = await dbCliente
+                .from('escuelas_demo')
+                .select('*')
+                .eq('codigo', codigo)
+                .maybeSingle();
+
+            if (errorEscuela || !escuela) {
+                alert("La clave de escuela ingresada no existe o es incorrecta.");
+                return;
+            }
+
+            // 2. Verificamos si ya alcanzó el límite de accesos adquiridos
+            const limite = escuela.limite_alumnos || 50;
+            const registrados = escuela.alumnos_registrados || 0;
+
+            if (registrados >= limite) {
+                alert("⚠️ Lo sentimos, esta escuela ha alcanzado el límite máximo de accesos adquiridos (" + limite + "). Contacta al administrador.");
+                return;
+            }
+
+            // 3. Registramos al alumno en la tabla 'usuarios_alumnos'
+            const { error: insertError } = await dbCliente
+                .from('usuarios_alumnos')
+                .insert([{ codigo_escuela: codigo, nombre_completo: nombre, usuario: usuario, password_alumno: password }]);
+
+            if (insertError) {
+                alert("Error al registrarse: " + insertError.message);
+                return;
+            }
+
+            // 4. Actualizamos el contador sumando 1 en la tabla de la escuela
+            await dbCliente
+                .from('escuelas_demo')
+                .update({ alumnos_registrados: registrados + 1 })
+                .eq('codigo', codigo);
+
+            alert("¡Registro exitoso! Ya puedes entrar a la plataforma con tu usuario y contraseña.");
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+</html>
